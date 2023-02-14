@@ -1,0 +1,25 @@
+# Use CentOS image as base
+FROM centos
+
+RUN sed -i -e "s|#baseurl=http://mirror.centos.org/|baseurl=http://vault.centos.org/|g" /etc/yum.repos.d/CentOS-*
+RUN sed -i -e "s|mirrorlist=|#mirrorlist=|g" /etc/yum.repos.d/CentOS-*
+
+# Update base image
+RUN yum update -y
+
+# Install Apache web server
+RUN yum install -y httpd
+
+RUN systemctl enable httpd
+
+# Expose the port of the Apache web server
+EXPOSE 80
+
+# Copy the index.html file to the web root folder
+COPY index.html index.html
+COPY index.html /var/www/html/
+
+
+# Start Apache web server
+CMD ["/usr/sbin/httpd", "-D", "FOREGROUND"]
+CMD ["httpd", "-D", "FOREGROUND"]
