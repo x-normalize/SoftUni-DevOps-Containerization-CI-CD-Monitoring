@@ -1,0 +1,65 @@
+pipeline{
+
+    agent any
+    stages {
+
+        stage("Clone the Project from SCM") {
+
+            steps {
+                sh '''
+                   rm -rf demo-app
+                   git clone https://github.com/x-normalize/demo-app.git
+                '''
+            }
+        }
+
+        stage("Build DB Image") {
+
+            steps {
+                sh '''
+                    cd /var/lib/jenkins/workspace/DO1-Demo/demo-app-home-work-M4/demo-app/db
+                    docker image build -t bgapp-db .
+                '''
+            }
+        }
+
+        stage("Build WEB Image") {
+
+            steps {
+                sh '''
+                    cd /var/lib/jenkins/workspace/DO1-Demo/demo-app-home-work-M4/demo-app/web
+                    docker image build -t bgapp-web .
+                '''
+            }
+        }
+
+        stage("Create Docker Network") {
+
+            steps {
+                sh '''
+                    docker network ls | grep appnet || docker network create appnet
+                '''
+            }
+        }        
+
+        stage("Run DB Container") {
+
+            steps {
+                sh '''
+                    docker container rm -f db || true
+                    docker container run -d --env MARIADB_ROOT_PASSWORD=123456 --net appnet --name db bgapp-db
+                '''
+            }
+        }
+
+        stage("Run WEB Container") {
+
+            steps {
+                sh '''
+                    docker container rm -f web || true
+                    docker container run -d -p 8085:80 --net appnet --name web bgapp-web
+                '''
+            }
+        }
+    }
+}
