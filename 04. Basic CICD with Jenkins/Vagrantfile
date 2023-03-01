@@ -1,0 +1,25 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+Vagrant.require_plugin "vagrant-env"
+
+Vagrant.configure(2) do |config|
+  # enable use of .env file
+  config.env.enable
+  config.ssh.insert_key = false
+
+  config.vm.define ENV['VM_DEFINE_NAME'] do |jenkins|
+    jenkins.vm.box=ENV['VAGRANT_BOX_NAME']
+    jenkins.vm.hostname = ENV['VM_HOST_NAME']
+    jenkins.vm.provider :virtualbox do |vb|
+      vb.memory = ENV['VB_MEMORY']
+      vb.cpus = ENV['VB_CPUS']
+    end
+    jenkins.vm.network "private_network", ip: ENV['VM_IP']
+    jenkins.vm.network "forwarded_port", guest: 80, host: 8000
+    jenkins.vm.network "forwarded_port", guest: 8080, host: 8080
+    jenkins.vm.network "forwarded_port", guest: 8085, host: 8085
+    jenkins.vm.provision "shell", path: ENV['VM_PROVISION_SCRIPT']
+    jenkins.vm.provision "shell", path: ENV['VM_PROVISION_JENKINS_SCRIPT']
+    jenkins.vm.provision "shell", path: ENV['VM_PROVISION__DOCKER_SCRIPT']
+  end
+end
