@@ -6,7 +6,7 @@
 
 The main goal of the course is to introduce some of the most commonly used tools that underpin most DevOps practices. Topics such as virtualization, containerization, and automation of core processes such as provisioning, monitoring, and more will be covered during the course. Popular and common tools in DevOps practices and beyond are selected. An introduction to each of these will be given, including theory and practice, and then placed in a general context with the technologies already discussed.
 
-## Acquired skills
+## Acquired skill
 
 - Installing and working with the ELK Stack
 - Installing and working with Docker
