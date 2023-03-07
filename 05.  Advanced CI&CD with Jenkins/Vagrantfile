@@ -1,0 +1,40 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+Vagrant.require_plugin "vagrant-env"
+
+Vagrant.configure(2) do |config|
+  # enable use of .env file
+  config.env.enable
+  config.ssh.insert_key = false
+
+  config.vm.define ENV['JENKINS_VM_DEFINE_NAME'] do |jenkins|
+    jenkins.vm.box=ENV['JENKINS_VAGRANT_BOX_NAME']
+    jenkins.vm.hostname = ENV['JENKINS_VM_HOST_NAME']  
+    jenkins.vm.network "private_network", ip: ENV['JENKINS_VM_IP']
+    jenkins.vm.network "forwarded_port", guest: 8080, host: 8080
+    jenkins.vm.provision "shell", path: ENV['ADD_HOSTS_SCRIPT']
+    jenkins.vm.provision "shell", path: ENV['JENKINS_VM_PROVISION_SCRIPT']
+    jenkins.vm.provision "shell", path: ENV['JENKINS_VM_PROVISION_JENKINS_SCRIPT']
+    jenkins.vm.provider :virtualbox do |vb|
+      vb.memory = ENV['JENKINS_VB_MEMORY']
+      vb.cpus = ENV['JENKINS_VB_CPUS']
+      vb.customize ["modifyvm", :id, "--usb", "off"]
+      vb.customize ["modifyvm", :id, "--usbehci", "off"]
+    end
+  end
+
+  config.vm.define ENV['DOCKER_VM_DEFINE_NAME'] do |docker|
+        docker.vm.box=ENV['DOCKER_VAGRANT_BOX_NAME']
+        docker.vm.hostname = ENV['DOCKER_VM_HOST_NAME']
+        docker.vm.network "private_network", ip: ENV['DOCKER_VM_IP']
+        docker.vm.provision "shell", path: ENV['ADD_HOSTS_SCRIPT']
+        docker.vm.provision "shell", path: ENV['DOCKER_VM_PROVISION_SCRIPT']
+        docker.vm.provision "shell", path: ENV['DOCKER_VM_PROVISION_DOCKER_SCRIPT']
+        docker.vm.provider :virtualbox do |vb|
+          vb.memory = ENV['DOCKER_VB_MEMORY']
+          vb.cpus = ENV['DOCKER_VB_CPUS']
+          vb.customize ["modifyvm", :id, "--usb", "off"]
+          vb.customize ["modifyvm", :id, "--usbehci", "off"]
+        end
+    end
+end
