@@ -1,0 +1,97 @@
+pipeline 
+{
+    agent 
+    {
+        label 'docker-node'
+    }
+
+    environment 
+    {
+        DOCKERHUB_CREDENTIALS=credentials('docker-hub-credentials')
+    }
+    
+    stages 
+    {
+        stage('Clone the Project from SCM') 
+        {
+            steps 
+            {
+                git branch: 'master', url: 'http://192.168.99.101:3000/x-normalize/bgapp'
+            }
+        }
+
+        stage("Prepare - Clean Up Any Leftover Docker Containers") {
+
+            steps {
+                sh '''
+                    docker container rm -f bgapp_db || true
+                    docker container rm -f bgapp_web || true
+                '''
+            }
+        }
+
+        stage("Deploy - Run Docker Compose - Development") {
+
+            steps {
+                sh '''
+                    docker-compose -f docker-compose.Development.yml up -d --build
+                '''
+            }
+        }
+
+        stage("Test Application - Development") {
+
+            steps {
+                echo 'Test #1 - reachability'
+                sh 'echo $(curl --write-out "%{http_code}" --silent --output /dev/null http://localhost:8080) | grep 200'
+
+                echo 'Test #2 - Факти за България'
+                sh "curl --silent http://localhost:8080 | grep 'Факти за България'"
+
+                echo 'Test #3 - Db Connection - wait 60s and curl Пловдив'
+                sh "sleep 40s && curl --silent --connect-timeout 60 http://localhost:8080 | grep 'Русе'"
+            }
+        }
+
+        stage("Stoping Application - Development") {
+
+            steps {
+                sh '''
+                   docker-compose -f docker-compose.Development.yml down
+                '''
+            }
+        }        
+    
+       stage('Login to Docker Hub') 
+        {
+            steps 
+            {
+                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+            }
+        }
+
+        stage("Publishing - Web - to Docker Hub") {
+
+            steps {
+                sh 'docker image tag bgapp_web x-normalize/bgapp-jenkins-web'
+                sh 'docker push x-normalize/bgapp-jenkins-web'
+            }
+        }   
+
+        stage("Publishing - Db - to Docker Hub") {
+
+            steps {
+                sh 'docker image tag bgapp_db x-normalize/bgapp-jenkins-db'
+                sh 'docker push x-normalize/bgapp-jenkins-db'
+            }
+        }   
+
+        stage("Deploy - Run Docker Compose - Production") {
+
+            steps {
+                sh 'docker-compose -f docker-compose.Production.yml up -d'
+            }
+        }
+
+    }
+}
