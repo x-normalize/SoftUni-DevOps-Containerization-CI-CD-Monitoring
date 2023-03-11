@@ -1,0 +1,28 @@
+version: "3.8"
+services:
+    web:
+      image: bgapp_web
+      build:
+        context: ./web
+        dockerfile: Dockerfile
+      container_name: bgapp_web
+      ports:
+          - 8080:80
+      volumes:
+          - ./web/:/var/www/html/
+      networks:
+          - bgapp-app-dev-network
+      depends_on:
+          - db
+    db:
+      image: bgapp_db
+      build:
+        context: ./db
+        dockerfile: Dockerfile
+      container_name: bgapp_db
+      networks:
+          - bgapp-app-dev-network
+      environment:
+          MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
+networks:
+    bgapp-app-dev-network:
