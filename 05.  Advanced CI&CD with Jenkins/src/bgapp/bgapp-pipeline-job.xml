@@ -29,7 +29,7 @@
       <configVersion>2</configVersion>
       <userRemoteConfigs>
         <hudson.plugins.git.UserRemoteConfig>
-          <url>http://192.168.99.101:3000/chofexx/bgapp.git</url>
+          <url>http://192.168.99.101:3000/x-normalize/bgapp.git</url>
           <credentialsId>21802602-900d-44ea-913a-c985184365c3</credentialsId>
         </hudson.plugins.git.UserRemoteConfig>
       </userRemoteConfigs>
