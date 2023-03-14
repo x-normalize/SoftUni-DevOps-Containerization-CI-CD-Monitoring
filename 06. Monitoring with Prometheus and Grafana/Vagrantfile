@@ -1,0 +1,42 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure(2) do |config|
+    
+  config.ssh.insert_key = false
+
+  config.vm.define "centos" do |centos|
+    centos.vm.box="deco9007/centos"
+    centos.vm.hostname = "centos.m6.hw"
+    centos.vm.provider :virtualbox do |vb|
+      vb.customize ["modifyvm", :id, "--memory", "4096"]
+      vb.name = "COS_M6"
+    end
+    centos.vm.network "private_network", ip: "192.168.56.11"
+    centos.vm.synced_folder "prom", "/home/vagrant/prom"
+    centos.vm.provision "shell", path: "add_hosts.sh"
+    centos.vm.provision "shell", path: "addons_centos.sh"
+    centos.vm.provision "shell", path: "centos_firewall_setup.sh"
+    centos.vm.provision "shell", path: "docker-setup_centos.sh"
+    #centos.vm.provision "shell", path: "config_dodaemon_as_prom_target.sh"
+    #centos.vm.provision "shell", path: "install_node_exporter.sh"
+    #centos.vm.provision "shell", path: "deploy_goprom_workers.sh"
+    centos.vm.provision "shell", path: "deploy_stack.sh"
+  end
+
+  #config.vm.define "ubuntu" do |ubuntu|
+    #ubuntu.vm.box=""
+    #ubuntu.vm.hostname = "ubuntu.m6.hw"
+    #ubuntu.vm.provider :virtualbox do |vb|
+      #vb.customize ["modifyvm", :id, "--memory", "2048"]
+      #vb.name = "UBUNTU_M6"
+    #end
+    #ubuntu.vm.network "private_network", ip: "192.168.56.12"
+    #ubuntu.vm.synced_folder "prometheus", "/prometheus"
+    #ubuntu.vm.synced_folder "grafana", "/grafana"
+	#ubuntu.vm.provision "shell", path: "add_hosts.sh"
+    #ubuntu.vm.provision "shell", path: "addons_ubuntu.sh"
+    #ubuntu.vm.provision "shell", path: "install_docker_ubuntu.sh"
+  #end
+
+end
