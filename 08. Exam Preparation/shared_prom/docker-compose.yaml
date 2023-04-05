@@ -1,0 +1,99 @@
+version: "3.8"
+  
+services:
+    prometheus:
+        container_name: prometheus
+        image: prom/prometheus
+        privileged: true
+        ports:
+            - 9090:9090
+        volumes:
+            - "./prometheus:/etc/prometheus:ro"
+            - "prometheus_data:/prometheus"
+        command:
+            - '--config.file=/etc/prometheus/prometheus.yml'
+            - '--storage.tsdb.path=/prometheus'
+            - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+            - '--web.console.templates=/usr/share/prometheus/consoles'
+        links:
+            - alertmanager:alertmanager
+        networks:
+            - back-tier
+        restart: always
+        depends_on:
+            - cadvisor
+    
+    alertmanager:
+        container_name: alertmanager
+        image: prom/alertmanager
+        ports:
+          - 9093:9093
+        volumes:
+          - ./alertmanager:/etc/alertmanager/
+        networks:
+          - back-tier
+        restart: always
+        command:
+          - '--config.file=/etc/alertmanager/alertmanager.yml'
+          - '--storage.path=/alertmanager'
+      
+    grafana:
+        container_name: grafana
+        image: grafana/grafana-oss
+        user: "472"
+        depends_on:
+          - prometheus
+        ports:
+          - 3000:3000
+        volumes:
+          - grafana_data:/var/lib/grafana
+          #- "./grafana:/var/lib/grafana:rw"
+        networks:
+          - back-tier
+          - front-tier
+        restart: always
+    
+    node-exporter:
+        container_name: node-exporter
+        image: prom/node-exporter
+        ports:
+          - 9100:9100
+        networks:
+          - back-tier
+          
+    cadvisor:
+        container_name: cadvisor
+        image: gcr.io/cadvisor/cadvisor
+        volumes:
+          - /:/rootfs:ro
+          - /var/run:/var/run:rw
+          - /sys:/sys:ro
+          - /var/lib/docker/:/var/lib/docker:ro
+        ports:
+          - 9323:8080
+        networks:
+          - back-tier
+        restart: always
+        deploy:
+          mode: global
+        depends_on:
+          - redis
+    redis:
+        image: redis:latest
+        container_name: redis
+        ports:
+          - 6379:6379
+        networks:
+          - back-tier
+
+volumes:
+  grafana_data:
+    name: grafana_data
+    external: false
+  prometheus_data:
+    name: prometheus_data
+    external: false
+  
+networks:
+  front-tier:
+  back-tier:
