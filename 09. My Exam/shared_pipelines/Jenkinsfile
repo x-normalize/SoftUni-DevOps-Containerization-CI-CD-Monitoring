@@ -1,0 +1,130 @@
+pipeline
+{
+  environment
+  {
+    DOCKERHUB_CREDENTIALS=credentials('docker-hub')
+    MYSQL_ROOT_PASSWORD='ExamPa$$w0rd'
+    DO_NETWORK="app-net"
+  }
+
+  agent
+  {
+    label 'docker-node'
+  }
+
+  stages
+  {
+    stage('Clone Repo')
+    {
+      steps
+      {
+        git branch: 'master', url: 'http://192.168.56.202:3000/douser/exam.git'
+      }
+    }
+
+    stage('Build images')
+    {
+      steps
+      {
+        sh 'docker image rm img-client || echo "Image img-client did not exist, nothing to remove."'
+        sh 'cd client ; docker image build -t img-client .'
+
+        sh 'docker image rm img-generator || echo "Image img-generator did not exist, nothing to remove."'
+        sh 'cd generator ; docker image build -t img-generator .'
+
+        sh 'docker image rm img-storage || echo "Image img-storage did not exist, nothing to remove."'
+        sh 'cd storage ; docker image build -t img-storage .'
+      }
+    }
+
+    stage('Create docker network $DO_NETWORK')
+    {
+      steps
+      {
+        sh 'docker network inspect $DO_NETWORK >/dev/null 2>&1 || docker network create $DO_NETWORK'
+      }
+    }
+
+    stage('Deploy app on Dev')
+    {
+      steps
+      {
+        sh 'docker container rm -f con-storage || true'
+        sh 'docker container run -d --name con-storage --net $DO_NETWORK -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD img-storage'
+
+        sh 'docker container rm -f con-generator || true'
+        sh 'docker container run -d --name con-generator --net $DO_NETWORK img-generator'
+
+        sh 'docker container rm -f con-client || true'
+        sh 'docker container run -d --name con-client --net $DO_NETWORK -p 8080:5000 img-client'
+      }
+    }
+
+    stage('Test Application')
+    {
+      steps
+      {
+        script
+        {
+          echo 'Test #1 - reachability'
+          sh 'sleep 10'
+          sh 'echo $(curl --write-out "%{http_code}" --silent --output /dev/null http://localhost:8080) | grep 200'
+        }
+      }
+    }
+    
+    stage('Stop app and remove containers from Dev')
+    {
+      steps
+      {
+//         sh 'docker-compose -f $COMPOSE_DEV down || true'
+        sh 'docker container rm -f con-storage || true'
+        sh 'docker container rm -f con-generator || true'
+        sh 'docker container rm -f con-client || true'
+      }
+    }
+
+    stage('Publishing images to Docker Hub')
+    {
+      steps
+      {
+        sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+
+        sh 'docker image rm xnormalizeonetest/img-storage || true'
+        sh 'docker image tag img-client xnormalizeonetest/img-storage'
+        sh 'docker push xnormalizeonetest/img-storage'
+
+        sh 'docker image rm xnormalizeonetest/img-storage || true'
+        sh 'docker image tag img-generator xnormalizeonetest/img-storage'
+        sh 'docker push xnormalizeonetest/img-storage'
+
+        sh 'docker image rm xnormalizeonetest/img-storage || true'
+        sh 'docker image tag xnormalizeonetest/img-storage'
+        sh 'docker push xnormalizeonetest/img-storage'
+      }
+    }
+    
+    stage('Deploy app on Prod')
+    {
+      steps
+      {
+        sh 'docker container rm -f con-storage || true'
+        sh 'docker container run -d --name con-storage --net $DO_NETWORK -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD img-storage'
+
+        sh 'docker container rm -f con-generator || true'
+        sh 'docker container run -d --name con-generator --net $DO_NETWORK img-generator'
+
+        sh 'docker container rm -f con-client || true'
+        sh 'docker container run -d --name con-client --net $DO_NETWORK -p 80:5000 img-client'
+      }
+    }
+  }
+
+  post
+  {
+    always
+    {
+      cleanWs()
+    }
+  }
+}
